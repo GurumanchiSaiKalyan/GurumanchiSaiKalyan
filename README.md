@@ -1,4 +1,4 @@
-- 👋 Hi, I’m @GurumanchiSaiKalyan Ex-Capgemini, Graduate Student : Masters in Information Systems from Central Michigan University
+- 👋 Hi, I’m @Gurumanchi Sai Kalyan, Senior software engineer - Ex-Capgemini, Graduate Student : Masters in Information Systems from Central Michigan University
 - 👀 I’m interested in Data 
 - 🌱 I’m currently learning Data Analysis, Data integration
 - 📫 How to reach me - gskalyan1499@gmail.com, +1 (989)-506-2921
