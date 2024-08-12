@@ -1,0 +1,448 @@
+---
+title: "Store Sales 2021"
+output:
+  pdf_document: default
+  html_document: default
+date: "2024-08-08"
+---
+<font size = "5" color = "purpul"> Final Project </font>
+
+<font size = "3" color = "Black"> Introduction to the Data set:
+Dataset Link - https://www.kaggle.com/datasets/pipchu/sales-2020-2021
+
+The dataset (sales_06_FY2020-21)contains sales transaction data for the fiscal year 22020–2021. the dataset is quite extensive, with 286,392 entries and 36 columns. Here is a brief overview of the key columns and the data they represent:
+
+order_id: Unique identifier for each order.
+
+order_date: Date when the order was placed.
+
+status: status of the order.
+
+item_id: A unique identifier for each item in the order.
+
+sku: stock-keeping unit, a unique identifier for the product.
+
+qty_ordered: quantity of the item ordered.
+
+price: price per unit of the item.
+
+value: the total value of the item in the order (quantity * price).
+
+discount_amount: Discount applied to the item.
+
+total: the final total for the item after discounts.
+
+category: category of the product.
+
+payment_method: Payment method used for the order.
+
+bi_st: Possibly billing state or a similar identifier.
+
+cust_id: A unique identifier for the customer.
+
+year: year of the transaction.
+
+month: month of the transaction.
+
+full_name: Full name of the customer.
+
+Gender: gender of the customer.
+
+age: age of the customer.
+
+E Mail: Email address of the customer.
+
+SSN: Social Security Number of the customer.
+
+Phone No.: The phone number of the customer.
+
+Place Name: The location name associated with the customer.
+
+County: county associated with the customer.
+
+City: City associated with the customer.
+
+State: State associated with the customer.
+
+Zip: ZIP code associated with the customer.
+
+Region: Region associated with the customer.
+
+User Name: Username of the customer.
+
+Discount_Percent: Percentage of discount applied.
+
+Summary of the Data:
+
+Data Type: The dataset includes a mix of numeric and categorical variables, with some columns (like order_id, sku, and bi_st) being of object (string) type, while others (like price, quantity_ordered, and age) are numeric.
+
+Size: The dataset is large, containing 286,392 rows, which will provide a robust base for any analysis.
+
+</font>
+
+```{r}
+library(ggplot2) #For visualization
+library(dplyr) #Data Manipulation
+options(scipen = 999) # Helps Scientific notation in numeric outputs
+
+
+setwd("/Users/saikalyangurumanchi/Library/CloudStorage/OneDrive-CentralMichiganUniversity/Acadamics/Summer-581/Final_project")
+Sales_2020_2021 <- read.csv("sales_06_FY2020-21.csv")
+```
+
+
+<font size = "5" color = "blue"> Data Cleaning </font>
+
+```{r}
+#Converting the date into "%Y-%m-%d" formate
+Sales_2020_2021$order_date <- as.Date(Sales_2020_2021$order_date, format="%Y-%m-%d")
+
+#filtering the sales data of 2021 year
+Sales_2021 <- Sales_2020_2021 %>%
+  filter(format(order_date, "%Y") == "2021")
+
+#View(Sales_2021)
+no_of_rows <- nrow(Sales_2021)
+print(no_of_rows) #177213 rows
+
+#Viewing Column names and datatype 
+glimpse(Sales_2021)
+
+
+#Removing the column names that are not required
+Sales_2021 <- Sales_2021[, !colnames(Sales_2021) %in% c(
+  'item_id', 'sku', 'bi_st', 'order_date', 'ref_num', 
+  'Middle.Initial', 'Name.Prefix', 'full_name', 'price', 'qty_ordered', 'Discount_Percent', 'County', 'Place.Name')]
+
+glimpse(Sales_2021)
+
+#Changing the column names
+new_names <- c('order_id', 'status', 'price', 'discount_amount', 'price_after_discount', 'category', 'payment_type', 'customer_id'
+               , 'year', 'month', 'first_name', 'last_name', 'sex', 'age', 'E-mail', 'customer_since', 'SSN', 'phone_num','city', 'state'
+               , 'zip', 'region', 'user_name')
+names(Sales_2021) <- new_names #Assigning the new column name to the Sales_2021 dataset
+
+glimpse(Sales_2021)
+
+#Reordering the columns in the order
+Sales_2021 <- Sales_2021 %>% select('user_name','customer_id','first_name', 'last_name', 'sex', 'age', 'order_id', 'category', 'price','discount_amount',
+                                    'price_after_discount', 'payment_type', 'month', 'year', 'status', 'customer_since', 'SSN', 'phone_num', 'city', 'state',
+                                    'zip', 'region','E-mail')
+
+
+
+glimpse(Sales_2021)
+
+#Changing the values in payment_type and status column which seems same
+
+#Checking for unique values in the payment_type column 
+unique_payment_type <- unique(Sales_2021$payment_type)
+print(unique_payment_type)
+
+# Transform the payment_types column into categories 
+Sales_2021 <- Sales_2021 %>%
+  mutate(payment_type = case_when(
+    payment_type %in% c('jazzwallet', 'Easypay', 'customercredit') ~ 'Digital Wallets',
+    payment_type %in% c('Payaxis', 'Easypay_MA', 'apg', 'Easypay') ~ 'Payment Gateways',
+    payment_type %in% c('easypay_voucher', 'jazzvoucher') ~ 'Voucher Systems',
+    payment_type == 'bankalfalah' ~ 'Banking Services',
+    TRUE ~ payment_type  # Keep the original value if none of the conditions match
+  ))
+
+# View the updated data set
+head(Sales_2021, 10)
+
+# Categorize the status column
+unique_status <- unique(Sales_2021$status)
+print(unique_status)
+
+Sales_2021 <- Sales_2021 %>%
+  mutate(status = case_when(
+    status %in% c("complete", "received", "closed", "paid") ~ "Completed or Fulfilled",
+    status %in% c("processing", "pending", "payment_review", "holded") ~ "In Progress or Awaiting Action",
+    status %in% c("canceled", "order_refunded", "refund") ~ "Refund or Cancellation",
+    TRUE ~ status  # Fallback category for any unexpected values
+  ))
+
+# View the updated data set
+head(Sales_2021, 10)
+
+#Changing the customer_since column to date datatype and changing the format 
+Sales_2021$customer_since <- as.Date(Sales_2021$customer_since, format = "%m/%d/%Y")
+Sales_2021$customer_since <- format(Sales_2021$customer_since, "%Y")
+
+# Function to mask data, showing only the last 4 digits
+mask_data <- function(x) {
+  if (is.character(x)) {
+    masked <- sub(".+(....)$", "XXX-XX-\\1", x)
+    return(masked)
+  }
+  return(x)
+}
+
+#Masking the SSN data and showing the last 4 digits of the data
+Sales_2021$SSN <- sapply(Sales_2021$SSN, mask_data)
+
+#Changing the data in month column from month-YYYY to Month formate
+Sales_2021$month <- sub("([A-Za-z]+)-\\d+", "\\1", Sales_2021$month)
+
+head(Sales_2021, 10)
+
+# Find duplicates based on all columns
+duplicates <- Sales_2021[duplicated(Sales_2021), ]
+number_of_duplicatesrecords <- nrow(duplicates)
+print(number_of_duplicatesrecords)
+
+
+# Remove duplicates
+Sales_2021 <- Sales_2021[!duplicated(Sales_2021), ]
+
+#Checking No of rows after removing duplicate data
+no_of_rows <- nrow(Sales_2021)
+print(no_of_rows) #170021 rows
+
+# Check for null values in each column
+null_values <- sapply(Sales_2021, function(x) sum(is.na(x)))
+
+# Print the result
+print(null_values) # There is no missing data in the Data set
+
+head(Sales_2021, 20)
+
+```
+<font size = "5" color = "blue"> Data Analysis </font>
+```{r}
+#Demographics
+# Age distribution
+ggplot(Sales_2021, aes(x = age)) + 
+  geom_histogram(binwidth = 5, fill = "blue", color = "black") + 
+  labs(title = "Distribution of Age", x = "age", y = "Count")
+
+```
+
+
+"Customers are equally distributed across various age groups, with a notable concentration of individuals between 45-55 years."
+
+To increase the score, implement targeted marketing campaigns, gather and act on customer feedback, offer exclusive promotions, enhance customer experience, create engaging activities, introduce loyalty programs, and strengthen digital marketing efforts specifically for the 45-55 age group.
+
+```{r}
+# Gender distribution
+ggplot(Sales_2021, aes(x = sex, fill = sex)) + 
+  geom_bar() + 
+  labs(title = "Distribution of Gender", x = "Gender", y = "Count")
+
+```
+
+Male customers slightly outnumber female customers its good to enhancing product offerings to better appeal to both genders.
+
+```{r}
+#Monthly Sales Analysis of 2021 using bar chart
+
+monthly_sales <- Sales_2021 %>%
+  filter(year == 2021) %>%
+  group_by(month) %>%
+  summarize(total_sales = sum(price_after_discount))
+
+# Plotting
+ggplot(monthly_sales, aes(x = month, y = total_sales, fill = month)) +
+  geom_col() +
+  labs(title = "Total Sales by Month for 2021", x = "Month", y = "Total Sales (Price After Discount)") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x labels for clarity
+
+```
+
+Focusing on replicating successful strategies from April, March, and June by offering special promotions, launching new products, enhancing marketing campaigns, and engaging customers through targeted advertising.
+
+```{r}
+# Category-wise sales
+ggplot(Sales_2021, aes(x = category, y = price_after_discount, fill = category)) + 
+  geom_bar(stat = "summary", fun = mean) + 
+  labs(title = "Average Sales by Category", x = "Category", y = "Average Sales") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+
+```
+
+More than 50% of the sales are coming from mobiles and tablets, entertainment, computing, and appliances.By this analysis stores can also track expected sale and maintain the inventory.
+
+```{r}
+# Total sales by region
+ggplot(Sales_2021, aes(x = region, y = price_after_discount, fill = region)) +
+  geom_bar(stat = "summary", fun = sum) +
+  labs(title = "Total Sales by Region", x = "Region", y = "Total Sales After Discount") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+South region has the highest sales.
+
+```{r}
+# Summarize data to find the Average discount by region
+highest_discounts <- Sales_2021 %>%
+  group_by(region) %>%
+  summarize(highest_discount = mean(discount_amount), .groups = 'drop')
+
+# Optional: Create a bar plot of the highest discounts by region
+ggplot(highest_discounts, aes(x = region, y = highest_discount, fill = region)) +
+  geom_col() +
+  labs(title = "Average Discounts by Region", x = "Region", y = "Average Discount Amount") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+Despite offering equal discounts across all regions, sales in the Northeast and West are lagging, to increase sales in these regions, considering implementing region-specific promotions, enhancing local marketing efforts, understanding and addressing unique regional preferences.
+
+```{r}
+#Geographic Distribution of Sales by state
+ggplot(Sales_2021, aes(x = state, y = price_after_discount, fill = state)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Sales by State", x = "State", y = "Total Sales") +
+  theme(axis.text.x = element_text(angle = 0, hjust = 1))
+
+```
+
+TX, CA, and NY cities have the highest sales overall.
+
+```{r}
+#We can see the texas state has the highest sales, lets check which top 10 cities in texas has the highest sales
+#Filtering top 10 cities data in texas
+texas_sales_10_cities <- Sales_2021 %>%
+  filter(state == "TX") %>%
+  group_by(city) %>%
+  summarize(total_sales = sum(price_after_discount)) %>%
+  arrange(desc(total_sales)) %>%
+  slice_head(n = 10) 
+
+# Create a line graph of sales for the top 10 cities in Texas
+ggplot(texas_sales_10_cities, aes(x = city, y = total_sales, group = 1)) +
+  geom_line() +
+  geom_point() +  # Add points for better visibility of each city
+  labs(title = "Line Graph of Sales by Top 10 Cities in Texas", x = "City", y = "Total Sales") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+Houston, Detroit, and San Antonio are the top three highest-selling cities in Texas.
+
+```{r}
+#Filtering records of texas city and calculating the sum of sales and find out the highest sold category with respective to gender
+texas_sales <- Sales_2021 %>%
+  filter(state == "TX") %>%
+  group_by(sex, category) %>%
+  summarize(total_sales = sum(price_after_discount), .groups = 'drop')
+
+# Create a bar plot of sales by category and gender in Texas
+ggplot(texas_sales, aes(x = category, y = total_sales, fill = sex)) +
+  geom_col(position = "dodge") +
+  labs(title = "Sales by Category and Gender in Texas", x = "Category", y = "Total Sales") +
+  scale_fill_brewer(palette = "Paired") +  # Color palette for distinction
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+As expected, Mobiles & Tablets are the highest sold category in Texas, with male customers slightly outnumbering females; however, it's beneficial to concentrate on both demographics and expand focus to different categories such as School & Education products, Books, and Soghaat to diversify sales.
+
+```{r}
+
+# Add a categorization column based on customer_since
+sales_data <- Sales_2021 %>%
+  mutate(customer_group = ifelse(customer_since < 2000, "Before 2000", "2000 and After"))
+
+# Calculate average price_after_discount for each group
+average_prices <- sales_data %>%
+  group_by(customer_group) %>%
+  summarize(average_price_after_discount = mean(price_after_discount), .groups = 'drop')
+
+# Output the results
+print(average_prices)
+
+# Create a bar chart to visualize average prices
+ggplot(average_prices, aes(x = customer_group, y = average_price_after_discount, fill = customer_group)) +
+  geom_col() +  # geom_col is used for bar charts where bars start at 0
+  labs(title = "Average Price After Discount by Customer Group", 
+       x = "Customer Group", 
+       y = "Average Price After Discount") +
+  scale_fill_brewer(palette = "Pastel1") +  # Aesthetic color setting
+  theme_minimal() +  # Minimal theme for a clean look
+  theme(axis.text.x = element_text(angle = 0, hjust = 0.5))  # Adjust text alignment if needed
+
+```
+
+Old customers from before 2000 are generating more sales than those who joined later; to boost sales, implementing Personalized Anniversary Gifts, Personalized Communication, Recognition Programs and Referral Rewards for Old customers
+
+```{r}
+# State-wise Distribution of Order Statuses
+status_distribution <- Sales_2021 %>%
+  group_by(region, status) %>%
+  summarize(count = n(), .groups = 'drop') %>%
+  mutate(percentage = count / sum(count) * 100)
+
+# Visualization Proportional Bar Chart
+ggplot(status_distribution, aes(x = region, y = percentage, fill = status)) +
+  geom_bar(stat = "identity", position = "fill") +
+  labs(title = "State-wise Distribution of Order Statuses", x = "Region", y = "Percentage (%)")
+```
+
+Nearly 50 % of the orders are refunds and cancellations, To decrease refunds and cancellations, we should focus on improving product quality, enhancing customer support, providing clear product descriptions, implementing flexible return policies, gathering customer feedback, sending pre-order confirmations, optimizing delivery experiences, improving the user experience are to be done.
+
+```{r}
+# Monthly Sales Analysis of 2021 using point plot
+
+Sales_2021$date <- as.Date(with(Sales_2021, paste(year, month, "01", sep = "-")), "%Y-%b-%d")
+
+library(ggplot2)
+ggplot(Sales_2021, aes(x = date, y = price_after_discount)) +
+  geom_point(color = "blue", size = 3, alpha = 0.6) +
+  labs(title = "Sales Trends Over Time", x = "Date", y = "Sales (After Discount)") +
+  theme_minimal()
+```
+
+In May, June, and July, people tend to buy more.
+
+Modelling:    
+
+
+we're building a logistic regression model to predict whether an order will be a "Refund or Cancellation" based on factors like price, discount, category, payment type, and more. After creating the model, we calculate the predicted probabilities for each order, showing how likely it is to be refunded or canceled. Finally, we plot these probabilities against the price to see how the price affects the likelihood of a refund or cancellation.
+
+We're finding how different factors, especially the price, influence the chances of an order being refunded or canceled.
+
+<font size = "5" color = "blue"> Modeling </font>
+
+```{r}
+
+
+# Convert 'status' to a binary factor
+Sales_2021$status_binary <- ifelse(Sales_2021$status == "Refund or Cancellation", 1, 0)
+
+# Logistic regression model to predict order status
+model <- glm(status_binary ~ price + discount_amount + category + payment_type + month + year + age + region, 
+             data = Sales_2021, 
+             family = binomial)
+
+# Summary of the model
+summary(model)
+
+# Add predicted probabilities to the data frame
+Sales_2021$predicted_probabilities <- predict(model, type = "response")
+head(Sales_2021, 20)
+
+
+# Plot the predicted probabilities against one of the predictors, e.g., price
+library(ggplot2)
+
+ggplot(Sales_2021, aes(x = price, y = predicted_probabilities)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "glm", method.args = list(family = "binomial"), se = FALSE) + #Adds the regression line to the plot
+  labs(title = "Predicted Probability of Refund or Cancellation vs. Price",
+       x = "Price",
+       y = "Predicted Probability of Refund or Cancellation")
+```
+
+Potential Insights:
+
+Refund/Cancellation Sensitivity:
+There is a strong correlation between price and the likelihood of a refund or cancellation, with higher prices leading to a greater chance of these outcomes.
